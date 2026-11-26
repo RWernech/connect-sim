@@ -1,0 +1,17 @@
+{
+  "name": "caminho-feliz",
+  "description": "Cliente existe, escolhe Reclamacao, caso abre e o contato vai para a fila.",
+  "inputs": ["000000000001"],
+  "views": {
+    "triagem": [{"action": "Enviar", "data": {"motivo": "Reclamacao"}}]
+  },
+  "expect": {
+    "outcome": "end_flow",
+    "path": [
+      "Definir_atributos", "Coletar_codigo", "Consultar_cliente", "Mostrar_triagem",
+      "Gravar_motivo", "Verificar_motivo", "Abrir_caso", "Definir_fila",
+      "Transferir_fila", "Encerrar"
+    ],
+    "attributes": {"Etapa": "triagem", "Motivo": "Reclamacao"}
+  }
+}

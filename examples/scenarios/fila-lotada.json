@@ -1,0 +1,19 @@
+{
+  "name": "fila-lotada",
+  "description": "A fila de atendimento esta lotada. O transfer falha com QueueAtCapacity e o cliente recebe a mensagem de erro.",
+  "inputs": ["000000000001"],
+  "views": {
+    "triagem": [{"action": "Enviar", "data": {"motivo": "Duvida"}}]
+  },
+  "queues": {
+    "atendimento": {"at_capacity": true}
+  },
+  "expect": {
+    "outcome": "disconnected",
+    "path": [
+      "Definir_atributos", "Coletar_codigo", "Consultar_cliente", "Mostrar_triagem",
+      "Gravar_motivo", "Verificar_motivo", "Definir_fila", "Transferir_fila",
+      "Mensagem_erro", "Desconectar"
+    ]
+  }
+}

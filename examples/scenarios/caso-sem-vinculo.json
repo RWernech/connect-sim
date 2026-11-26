@@ -1,0 +1,17 @@
+{
+  "name": "caso-sem-vinculo",
+  "description": "O caso abre, mas o contato nao fica vinculado. O erro ContactNotLinked segue para a fila e o contato continua.",
+  "inputs": ["000000000001"],
+  "views": {
+    "triagem": [{"action": "Enviar", "data": {"motivo": "Reclamacao"}}]
+  },
+  "case_link_fails": true,
+  "expect": {
+    "outcome": "end_flow",
+    "path": [
+      "Definir_atributos", "Coletar_codigo", "Consultar_cliente", "Mostrar_triagem",
+      "Gravar_motivo", "Verificar_motivo", "Abrir_caso", "Definir_fila",
+      "Transferir_fila", "Encerrar"
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+[project]
+name = "connect-sim"
+version = "0.1.0"
+description = "Simula contact flows do Amazon Connect localmente, com log de execucao e checagem estatica."
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+# Only 'baixar' imports boto3. check, run, run-all and conferir run without it.
+aws = ["boto3>=1.34"]
+# Offline unit tests. Run with: uv run --extra test pytest tests -q
+test = ["pytest>=8"]

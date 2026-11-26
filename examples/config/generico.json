@@ -1,0 +1,27 @@
+{
+  "cliente": "generico",
+  "descricao": "Config de exemplo com IDs ficticios. Para um cliente real, copie este arquivo para work/<cliente>/config/ e troque os valores pelos IDs reais.",
+  "queues": {
+    "atendimento": {"id": "queue-atendimento-exemplo"}
+  },
+  "views": {
+    "triagem": {"id": "view-triagem-exemplo", "version": "1", "actions": ["Enviar", "Cancelar"]}
+  },
+  "templates": {
+    "caso_padrao": {
+      "id": "template-caso-padrao-exemplo",
+      "fields": {
+        "motivo": {"id": "field-motivo-exemplo", "type": "single_select", "required": true, "options": ["Reclamacao", "Duvida", "Elogio"]},
+        "cliente_id": {"id": "field-cliente-id-exemplo", "type": "text", "required": true, "max_length": 12},
+        "created_by": {"id": "field-created-by-exemplo", "type": "text", "system": true, "required": false}
+      }
+    }
+  },
+  "lambdas": {
+    "lookup_cliente": {
+      "arn": "arn:aws:lambda:us-east-1:111122223333:function:lookup-cliente-exemplo",
+      "local": "../lambdas/lookup_cliente.py",
+      "function": "handler"
+    }
+  }
+}

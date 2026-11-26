@@ -1,0 +1,12 @@
+{
+  "name": "lambda-erro",
+  "description": "A Lambda de consulta falha. O fluxo cai no ramo NoMatchingError, avisa o cliente e desconecta.",
+  "inputs": ["000000000001"],
+  "lambdas": {
+    "lookup_cliente": {"fail": "timeout simulado na consulta"}
+  },
+  "expect": {
+    "outcome": "disconnected",
+    "path": ["Definir_atributos", "Coletar_codigo", "Consultar_cliente", "Mensagem_erro", "Desconectar"]
+  }
+}

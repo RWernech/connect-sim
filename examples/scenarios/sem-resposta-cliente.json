@@ -1,0 +1,9 @@
+{
+  "name": "sem-resposta-cliente",
+  "description": "O cliente nao informa o codigo. O GetParticipantInput estoura o tempo e o fluxo desconecta.",
+  "inputs": [],
+  "expect": {
+    "outcome": "disconnected",
+    "path": ["Definir_atributos", "Coletar_codigo", "Mensagem_erro", "Desconectar"]
+  }
+}

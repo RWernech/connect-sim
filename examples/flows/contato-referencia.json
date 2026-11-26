@@ -1,0 +1,153 @@
+{
+  "Version": "2019-10-30",
+  "StartAction": "Definir_atributos",
+  "Actions": [
+    {
+      "Identifier": "Definir_atributos",
+      "Type": "UpdateContactAttributes",
+      "Parameters": {
+        "Attributes": {"Etapa": "triagem"},
+        "TargetContact": "Current"
+      },
+      "Transitions": {"NextAction": "Coletar_codigo"}
+    },
+    {
+      "Identifier": "Coletar_codigo",
+      "Type": "GetParticipantInput",
+      "Parameters": {
+        "Text": "Informe seu codigo de cliente.",
+        "StoreInput": "True",
+        "InputTimeLimitSeconds": "30"
+      },
+      "Transitions": {
+        "NextAction": "Consultar_cliente",
+        "Errors": [
+          {"ErrorType": "InputTimeLimitExceeded", "NextAction": "Mensagem_erro"},
+          {"ErrorType": "NoMatchingError", "NextAction": "Mensagem_erro"}
+        ]
+      }
+    },
+    {
+      "Identifier": "Consultar_cliente",
+      "Type": "InvokeLambdaFunction",
+      "Parameters": {
+        "LambdaFunctionARN": "{{lambda.lookup_cliente.arn}}",
+        "InvocationTimeLimitSeconds": "8",
+        "InvocationType": "SYNCHRONOUS",
+        "LambdaInvocationAttributes": {"ClienteId": "$.StoredCustomerInput"},
+        "ResponseValidation": {"ResponseType": "STRING_MAP"}
+      },
+      "Transitions": {
+        "NextAction": "Mostrar_triagem",
+        "Errors": [
+          {"ErrorType": "NoMatchingError", "NextAction": "Mensagem_erro"}
+        ]
+      }
+    },
+    {
+      "Identifier": "Mostrar_triagem",
+      "Type": "ShowView",
+      "Parameters": {
+        "ViewResource": {
+          "Id": "{{view.triagem.id}}",
+          "Version": "{{view.triagem.version}}"
+        },
+        "InvocationTimeLimitSeconds": "400",
+        "ViewData": {"Nome": "$.External.nome"}
+      },
+      "Transitions": {
+        "Conditions": [
+          {
+            "NextAction": "Gravar_motivo",
+            "Condition": {"Operator": "Equals", "Operands": ["Enviar"]}
+          }
+        ],
+        "Errors": [
+          {"ErrorType": "NoMatchingCondition", "NextAction": "Mensagem_erro"},
+          {"ErrorType": "NoMatchingError", "NextAction": "Mensagem_erro"},
+          {"ErrorType": "TimeLimitExceeded", "NextAction": "Mensagem_erro"}
+        ]
+      }
+    },
+    {
+      "Identifier": "Gravar_motivo",
+      "Type": "UpdateContactAttributes",
+      "Parameters": {
+        "Attributes": {"Motivo": "$.Views.ViewResultData.motivo"},
+        "TargetContact": "Current"
+      },
+      "Transitions": {"NextAction": "Verificar_motivo"}
+    },
+    {
+      "Identifier": "Verificar_motivo",
+      "Type": "Compare",
+      "Parameters": {"ComparisonValue": "$.Attributes.Motivo"},
+      "Transitions": {
+        "Conditions": [
+          {
+            "NextAction": "Abrir_caso",
+            "Condition": {"Operator": "Equals", "Operands": ["Reclamacao"]}
+          }
+        ],
+        "Errors": [
+          {"ErrorType": "NoMatchingCondition", "NextAction": "Definir_fila"}
+        ]
+      }
+    },
+    {
+      "Identifier": "Abrir_caso",
+      "Type": "CreateCase",
+      "Parameters": {
+        "LinkContactToCase": "true",
+        "CaseTemplateId": "{{template.caso_padrao.id}}",
+        "CaseRequestFields": {
+          "{{field.caso_padrao.motivo}}": "$.Attributes.Motivo",
+          "{{field.caso_padrao.cliente_id}}": "$.StoredCustomerInput"
+        }
+      },
+      "Transitions": {
+        "NextAction": "Definir_fila",
+        "Errors": [
+          {"ErrorType": "ContactNotLinked", "NextAction": "Definir_fila"},
+          {"ErrorType": "NoMatchingError", "NextAction": "Mensagem_erro"}
+        ]
+      }
+    },
+    {
+      "Identifier": "Definir_fila",
+      "Type": "UpdateContactTargetQueue",
+      "Parameters": {"QueueId": "{{queue.atendimento.id}}"},
+      "Transitions": {"NextAction": "Transferir_fila"}
+    },
+    {
+      "Identifier": "Transferir_fila",
+      "Type": "TransferContactToQueue",
+      "Parameters": {},
+      "Transitions": {
+        "NextAction": "Encerrar",
+        "Errors": [
+          {"ErrorType": "QueueAtCapacity", "NextAction": "Mensagem_erro"},
+          {"ErrorType": "NoMatchingError", "NextAction": "Mensagem_erro"}
+        ]
+      }
+    },
+    {
+      "Identifier": "Encerrar",
+      "Type": "EndFlowExecution",
+      "Parameters": {},
+      "Transitions": {}
+    },
+    {
+      "Identifier": "Mensagem_erro",
+      "Type": "MessageParticipant",
+      "Parameters": {"Text": "Nao conseguimos concluir agora. Tente novamente mais tarde."},
+      "Transitions": {"NextAction": "Desconectar"}
+    },
+    {
+      "Identifier": "Desconectar",
+      "Type": "DisconnectParticipant",
+      "Parameters": {},
+      "Transitions": {}
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "duvida-direto-fila",
+  "description": "Escolhe Duvida. O Compare cai no ramo padrao e o contato vai para a fila sem abrir caso.",
+  "inputs": ["000000000001"],
+  "views": {
+    "triagem": [{"action": "Enviar", "data": {"motivo": "Duvida"}}]
+  },
+  "expect": {
+    "outcome": "end_flow",
+    "path": [
+      "Definir_atributos", "Coletar_codigo", "Consultar_cliente", "Mostrar_triagem",
+      "Gravar_motivo", "Verificar_motivo", "Definir_fila", "Transferir_fila", "Encerrar"
+    ],
+    "attributes": {"Motivo": "Duvida"}
+  }
+}
