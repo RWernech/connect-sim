@@ -56,7 +56,7 @@ flowchart LR
 
 O simulador não reproduz áudio, prompts, Lex com NLU real, filas e agentes reais, cotas, nem o código publicado na Lambda.
 
-Quando o flow usa um bloco sem simulador, a execução para com `NotSimulated`. O simulador não assume sucesso nesse caso.
+Quando o flow usa um bloco sem simulador, a execução para com `NotSimulated`. O simulador não assume sucesso nesse caso. A exceção são os três blocos de logging, voz e idioma, que só são pulados com `--pular-sem-efeito`.
 
 ## Requisitos
 
@@ -97,6 +97,8 @@ Roda um cenário. Sai com código 1 quando o cenário falha.
 uv run --python 3.11 -m connect_sim run --flow <flow.json> --config <config.json> --scenario <cenario.json>
 ```
 
+Com `--pular-sem-efeito`, o simulador pula os três blocos que só ajustam logging, voz e idioma: `UpdateFlowLoggingBehavior`, `UpdateContactTextToSpeechVoice` e `UpdateContactData`. Eles não escolhem rota, então o simulador segue o `NextAction`. Cada bloco pulado aparece como aviso no log e na lista `pulados` do resumo. Sem a opção, esses blocos param a execução com `NotSimulated`, como qualquer bloco sem simulador.
+
 ### run-all
 
 Roda todos os cenários de uma pasta. Sai com código 1 quando algum cenário falha, o que serve para CI. Use `--detalhe` para ver o passo a passo de cada cenário.
@@ -104,6 +106,8 @@ Roda todos os cenários de uma pasta. Sai com código 1 quando algum cenário fa
 ```bash
 uv run --python 3.11 -m connect_sim run-all --flow <flow.json> --config <config.json> --scenarios <pasta>
 ```
+
+Aceita `--pular-sem-efeito`, com o mesmo efeito descrito em `run`.
 
 ### logs
 
@@ -247,7 +251,7 @@ Com `--aceitar-atuais`, o `conferir` grava as divergências atuais nesse arquivo
 Cada execução grava em `runs/connect-sim/<flow>/<cenario>-<carimbo UTC>/`:
 
 - `events.jsonl`: um registro por bloco executado.
-- `summary.json`: o veredito, o caminho percorrido, os atributos finais e os casos criados.
+- `summary.json`: o veredito, o caminho percorrido, os atributos finais, os casos criados e os blocos pulados.
 
 A opção `--manter` define quantas execuções ficam guardadas por cenário (padrão: 20). A pasta `runs/` fica fora do git.
 
