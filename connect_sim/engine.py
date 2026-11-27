@@ -17,6 +17,14 @@ NO_RESULT = object()
 MAX_STEPS = 200
 NOT_SIMULATED = "NotSimulated"
 NO_FALLBACK = {"NoMatchingCondition", NOT_SIMULATED}
+# Blocos sem simulador que nao escolhem rota: ajustes de logging, voz e idioma.
+# Com --pular-sem-efeito, o simulador pula esses blocos (seguindo o NextAction) e avisa no log.
+# Qualquer outro bloco sem simulador continua parando com NotSimulated.
+SEM_EFEITO_NA_ROTA = frozenset({
+    "UpdateFlowLoggingBehavior",
+    "UpdateContactTextToSpeechVoice",
+    "UpdateContactData",
+})
 KNOWN_ROOTS = {"Attributes", "External", "StoredCustomerInput", "Views", "ContactData", "Case"}
 DEFAULT_CONTACT = {
     "ContactId": "contato-simulado-0001",
@@ -45,6 +53,7 @@ class RunResult:
     reason: str = ""
     attributes: dict = field(default_factory=dict)
     cases: list = field(default_factory=list)
+    skipped: list = field(default_factory=list)
 
 
 def _matches(cond, value):
@@ -96,7 +105,7 @@ def _find_route(errors, error_type):
 class Engine:
     """Runs one flow against one client config and one scenario."""
 
-    def __init__(self, flow, config, scenario, emit):
+    def __init__(self, flow, config, scenario, emit, skip=frozenset()):
         self.flow = flow
         self.config = config
         self.sc = scenario
@@ -113,6 +122,8 @@ class Engine:
         self._lambdas = {}
         self.last_case = {}
         self.depth = 0
+        self.skip = frozenset(skip)
+        self.skipped = []
 
     def run(self):
         path = []
@@ -150,7 +161,8 @@ class Engine:
         return self._finish("loop_limit", path, current, f"mais de {MAX_STEPS} passos sem sair do fluxo")
 
     def _finish(self, outcome, path, failed_at=None, reason=""):
-        return RunResult(outcome, list(path), failed_at, reason, dict(self.attrs), list(self.cases.cases))
+        return RunResult(outcome, list(path), failed_at, reason, dict(self.attrs), list(self.cases.cases),
+                         list(self.skipped))
 
     def _route(self, transitions, step):
         """Pick the next Action from already resolved Transitions."""
@@ -178,6 +190,10 @@ class Engine:
 
     def _execute(self, action, params):
         kind = action.get("Type", "")
+        if kind in self.skip:
+            self.skipped.append(kind)
+            return Step(message=f"pulado: {kind} sem simulador, sem efeito na rota (--pular-sem-efeito)",
+                        notes=[f"{kind} pulado: nao escolhe rota; o simulador so segue o NextAction"])
         handler = getattr(self, "_do_" + kind, None)
         if handler is None:
             return Step(error=NOT_SIMULATED, message=f"bloco {kind} ainda nao tem simulador")

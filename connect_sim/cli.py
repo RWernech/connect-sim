@@ -27,6 +27,8 @@ def build_parser():
     p.add_argument("--manter", type=int, default=20, help="execucoes guardadas por cenario (padrao: 20)")
     p.add_argument("--runs-dir", default="runs", help="onde gravar os logs (padrao: ./runs)")
     p.add_argument("--quiet", action="store_true", help="sem o passo a passo, so o resultado")
+    p.add_argument("--pular-sem-efeito", action="store_true",
+                   help="pula blocos sem simulador que nao escolhem rota (logging, voz, idioma)")
     p.set_defaults(func=cmd_run)
 
     p = sub.add_parser("run-all", help="roda todos os cenarios de uma pasta")
@@ -34,6 +36,8 @@ def build_parser():
     p.add_argument("--scenarios", required=True, help="pasta com os cenarios .json")
     p.add_argument("--manter", type=int, default=20, help="execucoes guardadas por cenario (padrao: 20)")
     p.add_argument("--detalhe", action="store_true", help="mostra o passo a passo de cada cenario")
+    p.add_argument("--pular-sem-efeito", action="store_true",
+                   help="pula blocos sem simulador que nao escolhem rota (logging, voz, idioma)")
     p.add_argument("--runs-dir", default="runs", help="onde gravar os logs (padrao: ./runs)")
     p.set_defaults(func=cmd_run_all)
 
@@ -86,7 +90,12 @@ def cmd_check(args):
     return 1 if errors else 0
 
 
-def run_scenario(flow, config, scenario, runs_dir, echo=True, manter=None, compact=False):
+def _skip(args):
+    """Blocos a pular quando --pular-sem-efeito esta ligado."""
+    return engine.SEM_EFEITO_NA_ROTA if getattr(args, "pular_sem_efeito", False) else frozenset()
+
+
+def run_scenario(flow, config, scenario, runs_dir, echo=True, manter=None, compact=False, skip=frozenset()):
     """Run one scenario, write its log, print the verdict. Return True when it passes.
 
     compact prints one verdict line, plus the divergences and the failing step. The
@@ -95,7 +104,7 @@ def run_scenario(flow, config, scenario, runs_dir, echo=True, manter=None, compa
     log = logs.RunLog(runs_dir, flow.name, scenario.name, echo=echo)
     if echo:
         print(f"Cenario: {scenario.name}. {scenario.description}".rstrip())
-    result = engine.Engine(flow, config, scenario, log.event).run()
+    result = engine.Engine(flow, config, scenario, log.event, skip=skip).run()
     problems = scen.mismatches(result, scenario.expect) if scenario.expect else []
     expected_divergence = scenario.expect_divergence
     if expected_divergence and not scenario.expect:
@@ -119,6 +128,7 @@ def run_scenario(flow, config, scenario, runs_dir, echo=True, manter=None, compa
         "path": result.path,
         "attributes": result.attributes,
         "cases": result.cases,
+        "pulados": result.skipped,
         "expect_divergence": expected_divergence,
         "mismatches": problems,
     }
@@ -161,7 +171,8 @@ def cmd_run(args):
         for problem in problems:
             print(f"ERRO cenario: {problem}")
         return 1
-    return 0 if run_scenario(flow, config, scenario, args.runs_dir, echo=not args.quiet, manter=args.manter) else 1
+    return 0 if run_scenario(flow, config, scenario, args.runs_dir, echo=not args.quiet, manter=args.manter,
+                             skip=_skip(args)) else 1
 
 
 def cmd_run_all(args):
@@ -184,7 +195,8 @@ def cmd_run_all(args):
             results.append((scenario.name, False))
             continue
         results.append((scenario.name, run_scenario(
-            flow, config, scenario, args.runs_dir, echo=args.detalhe, manter=args.manter, compact=not args.detalhe)))
+            flow, config, scenario, args.runs_dir, echo=args.detalhe, manter=args.manter, compact=not args.detalhe,
+            skip=_skip(args))))
     passed_count = sum(1 for _name, passed in results if passed)
     print(f"\n{passed_count} de {len(results)} cenario(s) passaram.")
     return 0 if passed_count == len(results) else 1
